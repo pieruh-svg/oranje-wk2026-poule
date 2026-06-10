@@ -1,292 +1,47 @@
 <!DOCTYPE html>
-<html lang="nl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oranje WK 2026 Poule</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100 font-sans text-gray-900">
-
-    <header class="bg-orange-500 text-white py-6 text-center shadow-md">
-        <h1 class="text-3xl font-black tracking-wider">🦁 ORANJE WK 2026 POULE</h1>
-        <p class="text-sm mt-1 opacity-90">Volg het Nederlands elftal & voorspel de winnaar</p>
+<html lang="nl"><head><meta charset="UTF-8"><script src="https://cdn.tailwindcss.com"></script><title>WK 2026 Poule</title></head>
+<body class="bg-gray-100 p-4">
+    <header class="bg-orange-500 text-white p-6 rounded-xl text-center mb-6 relative">
+        <h1 class="text-3xl font-black">🦁 ORANJE WK 2026 POULE</h1>
+        <button onclick="loadData()" class="absolute top-6 right-6 bg-white text-orange-500 font-bold px-4 py-2 rounded-full">🔄 Ververs</button>
     </header>
-
-    <main class="max-w-6xl mx-auto p-4 grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        <div class="md:col-span-1 space-y-6">
-            <div class="bg-white p-5 rounded-xl shadow">
-                <h2 class="text-xl font-bold mb-3 text-orange-600">Meedoen</h2>
-                <div class="space-y-3">
-                    <input id="regNaam" type="text" placeholder="Enkel voornaam vermelden" class="w-full border p-2 rounded">
-                    <input id="regCampioen" type="text" placeholder="Wie wordt Wereldkampioen?" class="w-full border p-2 rounded">
-                    <button onclick="registreer()" class="w-full bg-orange-500 text-white p-2 rounded font-bold hover:bg-orange-600 transition">Deelnemen</button>
-                </div>
-            </div>
-
-            <div class="bg-white p-5 rounded-xl shadow">
-                <h2 class="text-xl font-bold mb-3 text-gray-800">🏆 Ranglijst</h2>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="border-b text-sm text-gray-500">
-                                <th class="pb-2">#</th>
-                                <th class="pb-2">Naam</th>
-                                <th class="pb-2 text-right">Punten</th>
-                                <th class="pb-2 text-center w-10"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="ranglijstBody">
-                            </tbody>
-                    </table>
-                </div>
-            </div>
+    <main class="grid md:grid-cols-3 gap-6">
+        <div class="space-y-6">
+            <div class="bg-white p-5 rounded-xl shadow"><h2 class="font-bold mb-2">Meedoen</h2><input id="regNaam" placeholder="Naam" class="w-full border p-2 mb-2"><input id="regCampioen" placeholder="Wereldkampioen?" class="w-full border p-2 mb-2"><button onclick="registreer()" class="w-full bg-orange-500 text-white p-2">Deelnemen</button></div>
+            <div class="bg-white p-5 rounded-xl shadow"><h2 class="font-bold mb-2">🏆 Ranglijst</h2><table class="w-full" id="ranglijstBody"></table></div>
         </div>
-
         <div class="md:col-span-2 space-y-6">
-            <div class="bg-white p-5 rounded-xl shadow">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold text-gray-800">⚽ Wedstrijden Oranje</h2>
-                    <select id="userSelector" onchange="loadData()" class="border p-2 rounded font-semibold bg-gray-50">
-                        <option value="">-- Kies Deelnemer om te voorspellen --</option>
-                    </select>
-                </div>
-                
-                <div id="wedstrijdenContainer" class="space-y-4">
-                    </div>
-            </div>
-
-            <div class="bg-gray-800 text-white p-5 rounded-xl shadow space-y-4">
-                <h2 class="text-lg font-bold text-orange-400">🔒 Admin: Uitslag invoeren</h2>
-                <div class="grid grid-cols-2 md:grid-cols-5 gap-3 items-end text-black">
-                    <select id="adminMatch" class="p-2 rounded bg-white col-span-2 md:col-span-1 text-sm"></select>
-                    <input id="adminThuis" type="number" placeholder="Score Thuis" class="p-2 rounded bg-white">
-                    <input id="adminUit" type="number" placeholder="Score Uit" class="p-2 rounded bg-white">
-                    <select id="adminStatus" class="p-2 rounded bg-white text-sm">
-                        <option value="GESPEELD">Gespeeld (Bereken punten)</option>
-                        <option value="GEPLAND">Gepland (Wis uitslag)</option>
-                    </select>
-                    <input id="adminGoud" type="text" placeholder="Wereldkampioen (optioneel)" class="p-2 rounded bg-white">
-                </div>
-                <div class="flex flex-col md:flex-row gap-3">
-                    <input id="adminPassword" type="password" placeholder="Voer admin wachtwoord in" class="p-2 rounded text-black border flex-1">
-                    <button onclick="opslaanUitslag()" class="bg-green-500 text-white font-bold p-2 px-6 rounded hover:bg-green-600 transition">Uitslag Opslaan</button>
-                </div>
+            <div class="bg-white p-5 rounded-xl shadow"><select id="userSelector" onchange="loadData()" class="w-full p-2 border mb-4"><option value="">-- Kies naam --</option></select><div id="wedstrijdenContainer" class="space-y-2"></div></div>
+            <div class="bg-gray-800 text-white p-5 rounded-xl space-y-4">
+                <h2 class="text-orange-400 font-bold">🔒 Admin: Beheer</h2>
+                <div class="grid grid-cols-4 gap-2 text-black"><select id="adminMatch" class="p-1"></select><input id="adminThuis" placeholder="Thuis" class="p-1"><input id="adminUit" placeholder="Uit" class="p-1"><button onclick="opslaanUitslag()" class="bg-green-500 text-white">Save</button></div>
+                <div class="grid grid-cols-2 gap-2"><input id="newDate" placeholder="Datum" class="text-black p-1"><input id="newThuis" placeholder="Thuis" class="text-black p-1"><input id="newUit" placeholder="Uit" class="text-black p-1"><button onclick="nieuweWedstrijd()" class="bg-blue-500">Add</button></div>
+                <select id="deleteMatchSelect" class="text-black w-full p-1"></select><button onclick="verwijderWedstrijd()" class="bg-red-600 w-full">Delete Match</button>
+                <input id="adminPassword" type="password" placeholder="Pass" class="text-black w-full p-1">
             </div>
         </div>
     </main>
-
     <script>
-        let appData = { deelnemers: [], wedstrijden: [], voorspellingen: [] };
-
+        let appData = {};
         async function loadData() {
-            const res = await fetch('/api/data');
-            appData = await res.json();
-            
-            const tbody = document.getElementById('ranglijstBody');
-            tbody.innerHTML = appData.deelnemers.map((d, i) => `
-                <tr class="border-b last:border-0 py-2 group hover:bg-gray-50">
-                    <td class="py-2 font-bold text-gray-400">${i+1}</td>
-                    <td class="py-2 font-semibold text-sm md:text-base">
-                        ${d.naam} 
-                        <span class="text-xs text-gray-400 block font-normal">Kiest: ${d.wereldkampioen}</span>
-                    </td>
-                    <td class="py-2 text-right font-black text-orange-500">${d.punten}</td>
-                    <td class="py-2 text-center">
-                        <button onclick="verwijderSpelerPrompt(${d.id}, '${d.naam}')" class="text-red-500 hover:text-red-700 font-bold px-2 text-sm opacity-60 hover:opacity-100 transition" title="Verwijder ${d.naam}">
-                            ❌
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
-
-            const selector = document.getElementById('userSelector');
-            const huidigeSelectie = selector.value;
-            const userOptions = appData.deelnemers.map(d => `<option value="${d.id}">${d.naam}</option>`).join('');
-            
-            selector.innerHTML = '<option value="">-- Kies Deelnemer om te voorspellen --</option>' + userOptions;
-            selector.value = huidigeSelectie;
-
-            document.getElementById('adminMatch').innerHTML = appData.wedstrijden.map(w => `<option value="${w.id}">${w.thuis_team} - ${w.uit_team}</option>`).join('');
-
-            const gekozenUserId = parseInt(selector.value);
-            const container = document.getElementById('wedstrijdenContainer');
-            
-            if (!gekozenUserId) {
-                container.innerHTML = '<p class="text-gray-400 text-center py-6">Selecteer hierboven eerst je naam om je voorspellingen in te vullen of te bekijken.</p>';
-                return;
-            }
-
-            container.innerHTML = appData.wedstrijden.map(w => {
-                const voorspelling = appData.voorspellingen.find(v => v.wedstrijd_id === w.id && v.deelnemer_id === gekozenUserId);
-                const vThuis = voorspelling ? voorspelling.voorspelling_thuis : '';
-                const vUit = voorspelling ? voorspelling.voorspelling_uit : '';
-                const isGespeeld = w.status === 'GESPEELD';
-                
-                const heeftAlVoorspeld = voorspelling !== undefined;
-                const moetBlokkeren = isGespeeld || heeftAlVoorspeld;
-
-                return `
-                    <div class="border rounded-xl p-4 bg-gray-50 flex flex-col md:flex-row justify-between items-center gap-4">
-                        <div class="text-center md:text-left flex-1">
-                            <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">${w.datum}</span>
-                            <div class="text-lg font-black flex items-center justify-center md:justify-start gap-2">
-                                <span>${w.thuis_team} <span class="text-gray-400 font-normal">vs</span> ${w.uit_team}</span>
-                            </div>
-                            ${isGespeeld 
-                                ? `<div class="flex items-center justify-center md:justify-start gap-2 mt-1">
-                                     <span class="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded font-bold">Uitslag: ${w.uitslag_thuis} - ${w.uitslag_uit}</span>
-                                     <button onclick="wisUitslagPrompt(${w.id}, '${w.thuis_team} - ${w.uit_team}')" class="text-red-500 text-xs font-bold hover:text-red-700 transition" title="Wis uitslag en reset naar gepland">❌ Wis</button>
-                                   </div>` 
-                                : '<span class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded font-bold mt-1">Open voor voorspelling</span>'
-                            }
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <input id="vThuis-${w.id}" type="number" value="${vThuis}" placeholder="0" min="0" ${moetBlokkeren ? 'disabled' : ''} class="w-14 text-center border p-2 rounded font-bold ${moetBlokkeren ? 'bg-gray-200 text-gray-500 shadow-inner' : 'bg-white'} text-lg">
-                            <span class="font-bold text-gray-400">-</span>
-                            <input id="vUit-${w.id}" type="number" value="${vUit}" placeholder="0" min="0" ${moetBlokkeren ? 'disabled' : ''} class="w-14 text-center border p-2 rounded font-bold ${moetBlokkeren ? 'bg-gray-200 text-gray-500 shadow-inner' : 'bg-white'} text-lg">
-                            
-                            ${isGespeeld 
-                                ? '' 
-                                : (heeftAlVoorspeld 
-                                    ? `<span class="bg-green-100 text-green-700 font-bold px-3 py-2 rounded text-sm border border-green-300 ml-2">🔒 Definitief</span>`
-                                    : `<button onclick="opslaanVoorspelling(${w.id})" class="bg-gray-800 text-white px-3 py-2 rounded font-bold text-sm hover:bg-orange-500 transition ml-2">Opslaan</button>`
-                                  )
-                            }
-                        </div>
-                    </div>
-                `;
-            }).join('');
+            appData = await (await fetch('/api/data')).json();
+            document.getElementById('ranglijstBody').innerHTML = appData.deelnemers.map((d,i) => `<tr><td>${i+1}</td><td>${d.naam}</td><td>${d.punten}</td><td><button onclick="verwijderSpeler(${d.id})">❌</button></td></tr>`).join('');
+            document.getElementById('userSelector').innerHTML = '<option value="">-- Kies naam --</option>' + appData.deelnemers.map(d => `<option value="${d.id}">${d.naam}</option>`).join('');
+            document.getElementById('adminMatch').innerHTML = appData.wedstrijden.map(w => `<option value="${w.id}">${w.thuis_team}-${w.uit_team}</option>`).join('');
+            document.getElementById('deleteMatchSelect').innerHTML = appData.wedstrijden.map(w => `<option value="${w.id}">${w.thuis_team}-${w.uit_team}</option>`).join('');
+            const uid = document.getElementById('userSelector').value;
+            document.getElementById('wedstrijdenContainer').innerHTML = appData.wedstrijden.map(w => `<div>${w.thuis_team} vs ${w.uit_team} <input id="vT-${w.id}" type="number" class="w-12 border"> - <input id="vU-${w.id}" type="number" class="w-12 border"> <button onclick="saveV(${w.id})">Save</button></div>`).join('');
         }
-
-        async function registreer() {
-            const naam = document.getElementById('regNaam').value.trim();
-            const wereldkampioen = document.getElementById('regCampioen').value.trim();
-            if(!naam || !wereldkampioen) return alert('Vul alle velden in!');
-
-            const res = await fetch('/api/deelnemers', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ naam, wereldkampioen })
-            });
-            if(res.ok) {
-                document.getElementById('regNaam').value = '';
-                document.getElementById('regCampioen').value = '';
-                loadData();
-            } else {
-                alert('Fout bij registreren (naam bestaat mogelijk al).');
-            }
+        async function saveV(mid) {
+            const uid = document.getElementById('userSelector').value;
+            await fetch('/api/voorspellingen', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({deelnemer_id:uid, wedstrijd_id:mid, voorspelling_thuis:document.getElementById('vT-'+mid).value, voorspelling_uit:document.getElementById('vU-'+mid).value}) });
+            loadData();
         }
-
-        async function opslaanVoorspelling(matchId) {
-            const userId = document.getElementById('userSelector').value;
-            const vThuis = document.getElementById(`vThuis-${matchId}`).value;
-            const vUit = document.getElementById(`vUit-${matchId}`).value;
-            
-            if(!userId || vThuis === '' || vUit === '') return alert('Vul de volledige score in.');
-            if(!confirm("Weet je het zeker? Na het opslaan kun je deze voorspelling NIET meer aanpassen!")) return;
-
-            const res = await fetch('/api/voorspellingen', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    deelnemer_id: parseInt(userId),
-                    wedstrijd_id: matchId,
-                    voorspelling_thuis: parseInt(vThuis),
-                    voorspelling_uit: parseInt(vUit)
-                })
-            });
-
-            if(res.ok) {
-                alert('Voorspelling permanent opgeslagen!');
-                loadData();
-            } else {
-                const err = await res.json();
-                alert('Fout: ' + err.error);
-            }
-        }
-
-        async function wisUitslagPrompt(matchId, matchNaam) {
-            if (!confirm(`Weet je zeker dat je de uitslag van ${matchNaam} wilt wissen?`)) return;
-            
-            const password = prompt("Voer het admin wachtwoord in:");
-            if (password === null) return;
-            if (!password) return alert("Wachtwoord mag niet leeg zijn!");
-
-            const res = await fetch('/api/admin/wis-uitslag', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password, wedstrijd_id: matchId })
-            });
-
-            if (res.ok) {
-                alert('De uitslag is succesvol gewist!');
-                loadData();
-            } else {
-                const err = await res.json();
-                alert('Fout: ' + err.error);
-            }
-        }
-
-        async function opslaanUitslag() {
-            const password = document.getElementById('adminPassword').value;
-            const wedstrijd_id = document.getElementById('adminMatch').value;
-            const uitslag_thuis = document.getElementById('adminThuis').value;
-            const uitslag_uit = document.getElementById('adminUit').value;
-            const status = document.getElementById('adminStatus').value;
-            const eindgoud = document.getElementById('adminGoud').value.trim();
-
-            if(!password) return alert('Vul het admin wachtwoord in!');
-            if(status === 'GESPEELD' && (uitslag_thuis === '' || uitslag_uit === '')) return alert('Vul de uitslag in.');
-
-            const res = await fetch('/api/admin/uitslag', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    password,
-                    wedstrijd_id: parseInt(wedstrijd_id),
-                    uitslag_thuis: uitslag_thuis !== '' ? parseInt(uitslag_thuis) : null,
-                    uitslag_uit: uitslag_uit !== '' ? parseInt(uitslag_uit) : null,
-                    status,
-                    eindgoud: eindgoud || null
-                })
-            });
-
-            if (res.ok) {
-                alert('Uitslag succesvol bijgewerkt!');
-                document.getElementById('adminThuis').value = '';
-                document.getElementById('adminUit').value = '';
-                loadData();
-            } else {
-                const err = await res.json();
-                alert('Fout: ' + err.error);
-            }
-        }
-
-        async function verwijderSpelerPrompt(spelerId, spelerNaam) {
-            if (!confirm(`Weet je zeker dat je ${spelerNaam} wilt verwijderen?`)) return;
-            
-            const password = prompt(`Voer het admin wachtwoord in:`);
-            if (password === null) return;
-            if (!password) return alert('Wachtwoord mag niet leeg zijn!');
-
-            const res = await fetch('/api/admin/verwijder-speler', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password, herstel_id: spelerId })
-            });
-
-            if (res.ok) {
-                alert(`${spelerNaam} is succesvol verwijderd!`);
-                loadData();
-            } else {
-                const err = await res.json();
-                alert('Fout: ' + err.error);
-            }
-        }
-
+        async function registreer() { await fetch('/api/deelnemers', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({naam:document.getElementById('regNaam').value, wereldkampioen:document.getElementById('regCampioen').value}) }); loadData(); }
+        async function opslaanUitslag() { await fetch('/api/admin/uitslag', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:document.getElementById('adminPassword').value, wedstrijd_id:document.getElementById('adminMatch').value, uitslag_thuis:document.getElementById('adminThuis').value, uitslag_uit:document.getElementById('adminUit').value, status:'GESPEELD'}) }); loadData(); }
+        async function nieuweWedstrijd() { await fetch('/api/admin/nieuwe-wedstrijd', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:document.getElementById('adminPassword').value, datum:document.getElementById('newDate').value, thuis:document.getElementById('newThuis').value, uit:document.getElementById('newUit').value}) }); loadData(); }
+        async function verwijderWedstrijd() { await fetch('/api/admin/verwijder-wedstrijd', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:document.getElementById('adminPassword').value, wedstrijd_id:document.getElementById('deleteMatchSelect').value}) }); loadData(); }
+        async function verwijderSpeler(id) { await fetch('/api/admin/verwijder-speler', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:document.getElementById('adminPassword').value, herstel_id:id}) }); loadData(); }
         loadData();
     </script>
-</body>
-</html>
+</body></html>
