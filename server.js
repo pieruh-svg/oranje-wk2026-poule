@@ -14,6 +14,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 const ADMIN_PASSWORD = "admin1234";
+const API_KEY = process.env.FOOTBALL_API_KEY;
 
 // PUNTEN LOGICA ENGINE
 function berekenMatchPunten(vThuis, vUit, uThuis, uUit) {
@@ -52,60 +53,54 @@ async function updateRanglijst(optioneleWereldkampioen = null) {
 
 // LIVE API SYNC ENGINE
 async function fetchLiveUitslagen() {
+    if (!API_KEY) return false;
     try {
-        const response = await fetch('https://api.worldcup-results.com/v1/teams/netherlands');
+        const response = await fetch('https://api.football-data.org/v4/competitions/WC/matches', {
+            headers: { 'X-Auth-Token': API_KEY }
+        });
         if (!response.ok) return false;
         const data = await response.json();
 
-        // KPN Groep F Mapping
-        const apiMatches = [
-            { id: 1, opponent: 'Japan' },
-            { id: 2, opponent: 'Zweden' },
-            { id: 3, opponent: 'Tunisia' }
+        const mijnMatchen = [
+            { id: 1, tegenstander: 'Japan' },
+            { id: 2, tegenstander: 'Sweden' },
+            { id: 3, tegenstander: 'Tunisia' }
         ];
 
         let databaseAangepast = false;
 
-        for (let map of apiMatches) {
-            const liveMatch = data.matches.find(m => m.home_team.includes(map.opponent) || m.away_team.includes(map.opponent));
-            
-            if (liveMatch && liveMatch.status === 'FINISHED') {
-                const thuisUitslag = liveMatch.home_team_score;
-                const uitUitslag = liveMatch.away_team_score;
+        for (let match of data.matches) {
+            const isNederlandThuis = match.homeTeam.name === 'Netherlands';
+            const isNederlandUit = match.awayTeam.name === 'Netherlands';
 
-                const result = await pool.query(
-                    `UPDATE wedstrijden 
-                     SET uitslag_thuis = $1, uitslag_uit = $2, status = 'GESPEELD' 
-                     WHERE id = $3 AND status = 'GEPLAND'`, 
-                    [thuisUitslag, uitUitslag, map.id]
-                );
-                
-                if (result.rowCount > 0) {
-                    databaseAangepast = true;
+            if (isNederlandThuis || isNederlandUit) {
+                const tegenstanderNaam = isNederlandThuis ? match.awayTeam.name : match.homeTeam.name;
+                const matchKoppeling = mijnMatchen.find(m => tegenstanderNaam.includes(m.tegenstander));
+
+                if (matchKoppeling && match.status === 'FINISHED') {
+                    const thuisScore = match.score.fullTime.home;
+                    const uitScore = match.score.fullTime.away;
+
+                    const result = await pool.query(
+                        `UPDATE wedstrijden 
+                         SET uitslag_thuis = $1, uitslag_uit = $2, status = 'GESPEELD' 
+                         WHERE id = $3 AND status = 'GEPLAND'`, 
+                        [thuisScore, uitScore, matchKoppeling.id]
+                    );
+                    if (result.rowCount > 0) databaseAangepast = true;
                 }
             }
         }
-        
-        if (databaseAangepast) {
-            await updateRanglijst();
-        }
+        if (databaseAangepast) await updateRanglijst();
         return true;
     } catch (err) {
-        console.error("Fout bij ophalen live uitslagen:", err.message);
         return false;
     }
 }
 
-// API ROUTE VOOR UPTIMEROBOT
 app.get('/api/cron/sync', async (req, res) => {
     const syncSuccesvol = await fetchLiveUitslagen();
-    
-    // We sturen ALTIJD een nette status 200 terug, zodat UptimeRobot groen blijft
-    if (syncSuccesvol) {
-        res.status(200).json({ success: true, message: "Sync succesvol uitgevoerd." });
-    } else {
-        res.status(200).json({ success: false, message: "Sync uitgevoerd, maar API-bron was onbereikbaar." });
-    }
+    res.status(200).json({ success: syncSuccesvol });
 });
 
 // API: Haal status op
@@ -131,15 +126,30 @@ app.post('/api/deelnemers', async (req, res) => {
     }
 });
 
-// API: Voorspelling opslaan
+// API: Voorspelling opslaan (NU PERMANENT NA 1 KEER)
 app.post('/api/voorspellingen', async (req, res) => {
     const { deelnemer_id, wedstrijd_id, voorspelling_thuis, voorspelling_uit } = req.body;
     try {
+        // 1. Check of de wedstrijd zelf al gespeeld is
+        const matchCheck = await pool.query('SELECT status FROM wedstrijden WHERE id = $1', [wedstrijd_id]);
+        if (matchCheck.rows.length > 0 && matchCheck.rows[0].status === 'GESPEELD') {
+            return res.status(400).json({ error: "Deze wedstrijd is al afgelopen!" });
+        }
+
+        // 2. EXTRA BEVEILIGING: Check of deze gebruiker al EERDER heeft opgeslagen voor deze match
+        const bestaandeCheck = await pool.query(
+            'SELECT id FROM voorspellingen WHERE deelnemer_id = $1 AND wedstrijd_id = $2',
+            [deelnemer_id, wedstrijd_id]
+        );
+
+        if (bestaandeCheck.rows.length > 0) {
+            return res.status(400).json({ error: "Je hebt deze voorspelling al definitief opgeslagen!" });
+        }
+
+        // 3. Als er nog niks stond, opslaan als pure INSERT (geen UPDATE meer mogelijk!)
         await pool.query(
             `INSERT INTO voorspellingen (deelnemer_id, wedstrijd_id, voorspelling_thuis, voorspelling_uit) 
-             VALUES ($1, $2, $3, $4) 
-             ON CONFLICT (deelnemer_id, wedstrijd_id) 
-             DO UPDATE SET voorspelling_thuis = $3, voorspelling_uit = $4`,
+             VALUES ($1, $2, $3, $4)`,
             [deelnemer_id, wedstrijd_id, voorspelling_thuis, voorspelling_uit]
         );
         res.json({ success: true });
@@ -148,12 +158,17 @@ app.post('/api/voorspellingen', async (req, res) => {
     }
 });
 
-// API: Admin uitslag handmatig (Backup)
+// API: Admin uitslag handmatig
 app.post('/api/admin/uitslag', async (req, res) => {
     const { password, wedstrijd_id, uitslag_thuis, uitslag_uit, status, eindgoud } = req.body;
     if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: "Onjuist!" });
 
     try {
+        const huidigeStatus = await pool.query('SELECT status FROM wedstrijden WHERE id = $1', [wedstrijd_id]);
+        if (huidigeStatus.rows.length > 0 && huidigeStatus.rows[0].status === 'GESPEELD') {
+            return res.status(400).json({ error: "Deze uitslag staat al definitief vast!" });
+        }
+
         if (status === 'GEPLAND') {
             await pool.query('UPDATE wedstrijden SET uitslag_thuis = NULL, uitslag_uit = NULL, status = \'GEPLAND\' WHERE id = $1', [wedstrijd_id]);
         } else {
@@ -170,7 +185,6 @@ app.post('/api/admin/uitslag', async (req, res) => {
 app.post('/api/admin/verwijder-speler', async (req, res) => {
     const { password, herstel_id } = req.body;
     if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: "Onjuist!" });
-
     try {
         await pool.query('DELETE FROM deelnemers WHERE id = $1', [herstel_id]);
         await updateRanglijst();
