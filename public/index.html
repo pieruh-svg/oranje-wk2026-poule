@@ -42,6 +42,27 @@
                     </table>
                 </div>
             </div>
+
+            <div class="bg-white p-5 rounded-xl shadow">
+                <h2 class="text-xl font-bold mb-3 text-gray-800">🎁 Prijzenpot</h2>
+                <ol class="space-y-2 text-sm font-semibold text-gray-700">
+                    <li class="flex items-center gap-2 p-2 bg-orange-50 rounded border border-orange-100">
+                        <span class="text-lg">🥇</span>
+                        <span>1e plaats: <span class="text-orange-600 font-bold">Nootjes pakket</span></span>
+                    </li>
+                    <li class="flex items-center gap-2 p-2 bg-gray-50 rounded border border-gray-200">
+                        <span class="text-lg">🥈</span>
+                        <span>2e plaats: <span class="text-gray-600 font-bold">1e verliezer</span></span>
+                    </li>
+                    <li class="flex items-center gap-2 p-2 bg-gray-50 rounded border border-gray-200">
+                        <span class="text-lg">🥉</span>
+                        <span>3e plaats: <span class="text-gray-600 font-bold">2e verliezer</span></span>
+                    </li>
+                    <li class="text-xs text-gray-400 text-center italic mt-2">
+                        etc...
+                    </li>
+                </ol>
+            </div>
         </div>
 
         <div class="md:col-span-2 space-y-6">
@@ -208,10 +229,10 @@
         }
 
         async function wisUitslagPrompt(matchId, matchNaam) {
-            if (!confirm(`Weet je zeker dat je de uitslag van ${matchNaam} wilt wissen en de wedstrijd terug op 'Gepland' wilt zetten?`)) return;
+            if (!confirm(`Weet je zeker dat je de uitslag van ${matchNaam} wilt wissen?`)) return;
             
-            const password = prompt("Voer het admin wachtwoord in om de uitslag te wissen:");
-            if (password === null) return; // Geannuleerd
+            const password = prompt("Voer het admin wachtwoord in:");
+            if (password === null) return;
             if (!password) return alert("Wachtwoord mag niet leeg zijn!");
 
             const res = await fetch('/api/admin/wis-uitslag', {
@@ -221,7 +242,7 @@
             });
 
             if (res.ok) {
-                alert('De uitslag is succesvol gewist en de ranglijst is opnieuw berekend!');
+                alert('De uitslag is succesvol gewist!');
                 loadData();
             } else {
                 const err = await res.json();
@@ -265,9 +286,9 @@
         }
 
         async function verwijderSpelerPrompt(spelerId, spelerNaam) {
-            if (!confirm(`Weet je zeker dat je ${spelerNaam} permanent wilt verwijderen?`)) return;
+            if (!confirm(`Weet je zeker dat je ${spelerNaam} wilt verwijderen?`)) return;
             
-            const password = prompt(`Voer het admin wachtwoord in om ${spelerNaam} te verwijderen:`);
+            const password = prompt(`Voer het admin wachtwoord in:`);
             if (password === null) return;
             if (!password) return alert('Wachtwoord mag niet leeg zijn!');
 
