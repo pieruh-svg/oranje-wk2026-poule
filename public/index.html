@@ -34,6 +34,7 @@
                                 <th class="pb-2">#</th>
                                 <th class="pb-2">Naam</th>
                                 <th class="pb-2 text-right">Punten</th>
+                                <th class="pb-2 text-center w-10"></th>
                             </tr>
                         </thead>
                         <tbody id="ranglijstBody">
@@ -56,37 +57,21 @@
                     </div>
             </div>
 
-            <div class="bg-gray-800 text-white p-5 rounded-xl shadow space-y-6">
-                <div>
-                    <h2 class="text-lg font-bold text-orange-400 mb-2">🔒 Admin Beheer (Wachtwoord vereist)</h2>
-                    <input id="adminPassword" type="password" placeholder="Voer admin wachtwoord in" class="w-full md:w-64 p-2 rounded text-black border">
+            <div class="bg-gray-800 text-white p-5 rounded-xl shadow space-y-4">
+                <h2 class="text-lg font-bold text-orange-400">🔒 Admin: Uitslag Invoeren of Wijzigen</h2>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-3 items-end text-black">
+                    <select id="adminMatch" class="p-2 rounded bg-white col-span-2 md:col-span-1 text-sm"></select>
+                    <input id="adminThuis" type="number" placeholder="Score Thuis" class="p-2 rounded bg-white">
+                    <input id="adminUit" type="number" placeholder="Score Uit" class="p-2 rounded bg-white">
+                    <select id="adminStatus" class="p-2 rounded bg-white text-sm">
+                        <option value="GESPEELD">Gespeeld (Bereken punten)</option>
+                        <option value="GEPLAND">Gepland (Wis uitslag)</option>
+                    </select>
+                    <input id="adminGoud" type="text" placeholder="Wereldkampioen (optioneel)" class="p-2 rounded bg-white">
                 </div>
-
-                <hr class="border-gray-700">
-
-                <div>
-                    <h3 class="text-sm font-bold text-gray-300 mb-2">Uitslag Invoeren of Wijzigen</h3>
-                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 items-end text-black">
-                        <select id="adminMatch" class="p-2 rounded bg-white col-span-2 md:col-span-1 text-sm"></select>
-                        <input id="adminThuis" type="number" placeholder="Score Thuis" class="p-2 rounded bg-white">
-                        <input id="adminUit" type="number" placeholder="Score Uit" class="p-2 rounded bg-white">
-                        <select id="adminStatus" class="p-2 rounded bg-white text-sm">
-                            <option value="GESPEELD">Gespeeld (Bereken punten)</option>
-                            <option value="GEPLAND">Gepland (Wis uitslag)</option>
-                        </select>
-                        <input id="adminGoud" type="text" placeholder="Wereldkampioen (optioneel)" class="p-2 rounded bg-white">
-                        <button onclick="opslaanUitslag()" class="col-span-2 md:col-span-5 bg-green-500 text-white font-bold p-2 rounded hover:bg-green-600">Uitslag Opslaan</button>
-                    </div>
-                </div>
-
-                <hr class="border-gray-700">
-
-                <div>
-                    <h3 class="text-sm font-bold text-gray-300 mb-2">Deelnemer Verwijderen</h3>
-                    <div class="flex gap-3 text-black">
-                        <select id="adminDelUser" class="p-2 rounded bg-white flex-1"></select>
-                        <button onclick="verwijderSpeler()" class="bg-red-600 text-white font-bold px-4 py-2 rounded hover:bg-red-700">Verwijder Speler</button>
-                    </div>
+                <div class="flex flex-col md:flex-row gap-3">
+                    <input id="adminPassword" type="password" placeholder="Voer admin wachtwoord in" class="p-2 rounded text-black border flex-1">
+                    <button onclick="opslaanUitslag()" class="bg-green-500 text-white font-bold p-2 px-6 rounded hover:bg-green-600 transition">Uitslag Opslaan</button>
                 </div>
             </div>
         </div>
@@ -99,25 +84,31 @@
             const res = await fetch('/api/data');
             appData = await res.json();
             
-            // Ranglijst renderen
+            // Ranglijst renderen met het rode kruisje direct in de tabel
             const tbody = document.getElementById('ranglijstBody');
             tbody.innerHTML = appData.deelnemers.map((d, i) => `
-                <tr class="border-b last:border-0 py-2">
+                <tr class="border-b last:border-0 py-2 group hover:bg-gray-50">
                     <td class="py-2 font-bold text-gray-400">${i+1}</td>
-                    <td class="py-2 font-semibold">${d.naam} <span class="text-xs text-gray-400 block">Kiest: ${d.wereldkampioen}</span></td>
+                    <td class="py-2 font-semibold text-sm md:text-base">
+                        ${d.naam} 
+                        <span class="text-xs text-gray-400 block font-normal">Kiest: ${d.wereldkampioen}</span>
+                    </td>
                     <td class="py-2 text-right font-black text-orange-500">${d.punten}</td>
+                    <td class="py-2 text-center">
+                        <button onclick="verwijderSpelerPrompt(${d.id}, '${d.naam}')" class="text-red-500 hover:text-red-700 font-bold px-2 text-sm opacity-60 hover:opacity-100 transition" title="Verwijder ${d.naam}">
+                            ❌
+                        </button>
+                    </td>
                 </tr>
             `).join('');
 
-            // Deelnemer selectors updaten
+            // Deelnemer selector updaten
             const selector = document.getElementById('userSelector');
             const huidigeSelectie = selector.value;
             const userOptions = appData.deelnemers.map(d => `<option value="${d.id}">${d.naam}</option>`).join('');
             
             selector.innerHTML = '<option value="">-- Kies Deelnemer om te voorspellen --</option>' + userOptions;
             selector.value = huidigeSelectie;
-
-            document.getElementById('adminDelUser').innerHTML = '<option value="">-- Selecteer Speler --</option>' + userOptions;
 
             // Admin match selector updaten
             document.getElementById('adminMatch').innerHTML = appData.wedstrijden.map(w => `<option value="${w.id}">${w.thuis_team} - ${w.uit_team}</option>`).join('');
@@ -230,23 +221,22 @@
             }
         }
 
-        async function verwijderSpeler() {
-            const password = document.getElementById('adminPassword').value;
-            const herstel_id = document.getElementById('adminDelUser').value;
-
-            if(!password) return alert('Vul het admin wachtwoord in!');
-            if(!herstel_id) return alert('Selecteer een speler om te verwijderen.');
-
-            if(!confirm('Weet je zeker dat je deze speler permanent wilt verwijderen?')) return;
+        // Nieuwe functie voor het kruisje met pop-up wachtwoord prompt
+        async function verwijderSpelerPrompt(spelerId, spelerNaam) {
+            if (!confirm(`Weet je zeker dat je ${spelerNaam} permanent wilt verwijderen?`)) return;
+            
+            const password = prompt(`Voer het admin wachtwoord in om ${spelerNaam} te verwijderen:`);
+            if (password === null) return; // Geannuleerd
+            if (!password) return alert('Wachtwoord mag niet leeg zijn!');
 
             const res = await fetch('/api/admin/verwijder-speler', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password, herstel_id: parseInt(herstel_id) })
+                body: JSON.stringify({ password, herstel_id: spelerId })
             });
 
             if (res.ok) {
-                alert('Speler succesvol verwijderd!');
+                alert(`${spelerNaam} is succesvol verwijderd!`);
                 loadData();
             } else {
                 const err = await res.json();
