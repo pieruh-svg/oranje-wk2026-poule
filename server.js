@@ -126,17 +126,15 @@ app.post('/api/deelnemers', async (req, res) => {
     }
 });
 
-// API: Voorspelling opslaan (OPGELOST: Vraagt nu niet meer naar "id"-kolom)
+// API: Voorspelling opslaan
 app.post('/api/voorspellingen', async (req, res) => {
     const { deelnemer_id, wedstrijd_id, voorspelling_thuis, voorspelling_uit } = req.body;
     try {
-        // 1. Check of de wedstrijd zelf al gespeeld is
         const matchCheck = await pool.query('SELECT status FROM wedstrijden WHERE id = $1', [wedstrijd_id]);
         if (matchCheck.rows.length > 0 && matchCheck.rows[0].status === 'GESPEELD') {
             return res.status(400).json({ error: "Deze wedstrijd is al afgelopen!" });
         }
 
-        // 2. CHECK OP BASIS VAN DEELNEMER & WEDSTRIJD (Voorkomt de "column id does not exist" crash)
         const bestaandeCheck = await pool.query(
             'SELECT deelnemer_id FROM voorspellingen WHERE deelnemer_id = $1 AND wedstrijd_id = $2',
             [deelnemer_id, wedstrijd_id]
@@ -146,7 +144,6 @@ app.post('/api/voorspellingen', async (req, res) => {
             return res.status(400).json({ error: "Je hebt deze voorspelling al definitief opgeslagen!" });
         }
 
-        // 3. Opslaan
         await pool.query(
             `INSERT INTO voorspellingen (deelnemer_id, wedstrijd_id, voorspelling_thuis, voorspelling_uit) 
              VALUES ($1, $2, $3, $4)`,
@@ -175,6 +172,28 @@ app.post('/api/admin/uitslag', async (req, res) => {
             await pool.query('UPDATE wedstrijden SET uitslag_thuis = $1, uitslag_uit = $2, status = \'GESPEELD\' WHERE id = $3', [uitslag_thuis, uitslag_uit, wedstrijd_id]);
         }
         await updateRanglijst(eindgoud);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// API: Admin BEVEILIGD uitslag wissen / resetten naar gepland
+app.post('/api/admin/wis-uitslag', async (req, res) => {
+    const { password, wedstrijd_id } = req.body;
+    if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: "Onjuist admin wachtwoord!" });
+
+    try {
+        // Reset de uitslag naar NULL en zet de status terug op GEPLAND
+        await pool.query(
+            `UPDATE wedstrijden 
+             SET uitslag_thuis = NULL, uitslag_uit = NULL, status = 'GEPLAND' 
+             WHERE id = $1`, 
+            [wedstrijd_id]
+        );
+        
+        // Bereken de ranglijst opnieuw (zodat de punten van deze wedstrijd vervallen)
+        await updateRanglijst();
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
