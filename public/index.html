@@ -124,16 +124,23 @@
                 const vUit = voorspelling ? voorspelling.voorspelling_uit : '';
                 const isGespeeld = w.status === 'GESPEELD';
                 
-                // NIEUW: Heeft deze gebruiker deze wedstrijd al eens opgeslagen?
                 const heeftAlVoorspeld = voorspelling !== undefined;
                 const moetBlokkeren = isGespeeld || heeftAlVoorspeld;
 
                 return `
                     <div class="border rounded-xl p-4 bg-gray-50 flex flex-col md:flex-row justify-between items-center gap-4">
-                        <div class="text-center md:text-left">
+                        <div class="text-center md:text-left flex-1">
                             <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">${w.datum}</span>
-                            <div class="text-lg font-black">${w.thuis_team} <span class="text-gray-400 font-normal">vs</span> ${w.uit_team}</div>
-                            ${isGespeeld ? `<span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded font-bold mt-1">Uitslag: ${w.uitslag_thuis} - ${w.uitslag_uit}</span>` : '<span class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded font-bold mt-1">Open voor voorspelling</span>'}
+                            <div class="text-lg font-black flex items-center justify-center md:justify-start gap-2">
+                                <span>${w.thuis_team} <span class="text-gray-400 font-normal">vs</span> ${w.uit_team}</span>
+                            </div>
+                            ${isGespeeld 
+                                ? `<div class="flex items-center justify-center md:justify-start gap-2 mt-1">
+                                     <span class="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded font-bold">Uitslag: ${w.uitslag_thuis} - ${w.uitslag_uit}</span>
+                                     <button onclick="wisUitslagPrompt(${w.id}, '${w.thuis_team} - ${w.uit_team}')" class="text-red-500 text-xs font-bold hover:text-red-700 transition" title="Wis uitslag en reset naar gepland">❌ Wis</button>
+                                   </div>` 
+                                : '<span class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded font-bold mt-1">Open voor voorspelling</span>'
+                            }
                         </div>
                         <div class="flex items-center gap-2">
                             <input id="vThuis-${w.id}" type="number" value="${vThuis}" placeholder="0" min="0" ${moetBlokkeren ? 'disabled' : ''} class="w-14 text-center border p-2 rounded font-bold ${moetBlokkeren ? 'bg-gray-200 text-gray-500 shadow-inner' : 'bg-white'} text-lg">
@@ -193,6 +200,28 @@
 
             if(res.ok) {
                 alert('Voorspelling permanent opgeslagen!');
+                loadData();
+            } else {
+                const err = await res.json();
+                alert('Fout: ' + err.error);
+            }
+        }
+
+        async function wisUitslagPrompt(matchId, matchNaam) {
+            if (!confirm(`Weet je zeker dat je de uitslag van ${matchNaam} wilt wissen en de wedstrijd terug op 'Gepland' wilt zetten?`)) return;
+            
+            const password = prompt("Voer het admin wachtwoord in om de uitslag te wissen:");
+            if (password === null) return; // Geannuleerd
+            if (!password) return alert("Wachtwoord mag niet leeg zijn!");
+
+            const res = await fetch('/api/admin/wis-uitslag', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password, wedstrijd_id: matchId })
+            });
+
+            if (res.ok) {
+                alert('De uitslag is succesvol gewist en de ranglijst is opnieuw berekend!');
                 loadData();
             } else {
                 const err = await res.json();
