@@ -20,7 +20,7 @@
                 <h2 class="text-xl font-bold mb-3 text-orange-600">Meedoen</h2>
                 <div class="space-y-3">
                     <input id="regNaam" type="text" placeholder="Jouw Naam" class="w-full border p-2 rounded">
-                    <input id="regKampioen" type="text" placeholder="Wie wordt Wereldkampioen?" class="w-full border p-2 rounded">
+                    <input id="regCampioen" type="text" placeholder="Wie wordt Wereldkampioen?" class="w-full border p-2 rounded">
                     <button onclick="registreer()" class="w-full bg-orange-500 text-white p-2 rounded font-bold hover:bg-orange-600 transition">Deelnemen</button>
                 </div>
             </div>
@@ -84,7 +84,6 @@
             const res = await fetch('/api/data');
             appData = await res.json();
             
-            // Ranglijst renderen met het rode kruisje direct in de tabel
             const tbody = document.getElementById('ranglijstBody');
             tbody.innerHTML = appData.deelnemers.map((d, i) => `
                 <tr class="border-b last:border-0 py-2 group hover:bg-gray-50">
@@ -102,7 +101,6 @@
                 </tr>
             `).join('');
 
-            // Deelnemer selector updaten
             const selector = document.getElementById('userSelector');
             const huidigeSelectie = selector.value;
             const userOptions = appData.deelnemers.map(d => `<option value="${d.id}">${d.naam}</option>`).join('');
@@ -110,10 +108,8 @@
             selector.innerHTML = '<option value="">-- Kies Deelnemer om te voorspellen --</option>' + userOptions;
             selector.value = huidigeSelectie;
 
-            // Admin match selector updaten
             document.getElementById('adminMatch').innerHTML = appData.wedstrijden.map(w => `<option value="${w.id}">${w.thuis_team} - ${w.uit_team}</option>`).join('');
 
-            // Matchen renderen
             const gekozenUserId = parseInt(selector.value);
             const container = document.getElementById('wedstrijdenContainer');
             
@@ -127,6 +123,10 @@
                 const vThuis = voorspelling ? voorspelling.voorspelling_thuis : '';
                 const vUit = voorspelling ? voorspelling.voorspelling_uit : '';
                 const isGespeeld = w.status === 'GESPEELD';
+                
+                // NIEUW: Heeft deze gebruiker deze wedstrijd al eens opgeslagen?
+                const heeftAlVoorspeld = voorspelling !== undefined;
+                const moetBlokkeren = isGespeeld || heeftAlVoorspeld;
 
                 return `
                     <div class="border rounded-xl p-4 bg-gray-50 flex flex-col md:flex-row justify-between items-center gap-4">
@@ -136,10 +136,17 @@
                             ${isGespeeld ? `<span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded font-bold mt-1">Uitslag: ${w.uitslag_thuis} - ${w.uitslag_uit}</span>` : '<span class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded font-bold mt-1">Open voor voorspelling</span>'}
                         </div>
                         <div class="flex items-center gap-2">
-                            <input id="vThuis-${w.id}" type="number" value="${vThuis}" placeholder="0" min="0" ${isGespeeld ? 'disabled' : ''} class="w-14 text-center border p-2 rounded font-bold bg-white text-lg">
+                            <input id="vThuis-${w.id}" type="number" value="${vThuis}" placeholder="0" min="0" ${moetBlokkeren ? 'disabled' : ''} class="w-14 text-center border p-2 rounded font-bold ${moetBlokkeren ? 'bg-gray-200 text-gray-500 shadow-inner' : 'bg-white'} text-lg">
                             <span class="font-bold text-gray-400">-</span>
-                            <input id="vUit-${w.id}" type="number" value="${vUit}" placeholder="0" min="0" ${isGespeeld ? 'disabled' : ''} class="w-14 text-center border p-2 rounded font-bold bg-white text-lg">
-                            ${!isGespeeld ? `<button onclick="opslaanVoorspelling(${w.id})" class="bg-gray-800 text-white px-3 py-2 rounded font-bold text-sm hover:bg-orange-500 transition ml-2">Opslaan</button>` : ''}
+                            <input id="vUit-${w.id}" type="number" value="${vUit}" placeholder="0" min="0" ${moetBlokkeren ? 'disabled' : ''} class="w-14 text-center border p-2 rounded font-bold ${moetBlokkeren ? 'bg-gray-200 text-gray-500 shadow-inner' : 'bg-white'} text-lg">
+                            
+                            ${isGespeeld 
+                                ? '' 
+                                : (heeftAlVoorspeld 
+                                    ? `<span class="bg-green-100 text-green-700 font-bold px-3 py-2 rounded text-sm border border-green-300 ml-2">🔒 Definitief</span>`
+                                    : `<button onclick="opslaanVoorspelling(${w.id})" class="bg-gray-800 text-white px-3 py-2 rounded font-bold text-sm hover:bg-orange-500 transition ml-2">Opslaan</button>`
+                                  )
+                            }
                         </div>
                     </div>
                 `;
@@ -148,7 +155,7 @@
 
         async function registreer() {
             const naam = document.getElementById('regNaam').value.trim();
-            const wereldkampioen = document.getElementById('regKampioen').value.trim();
+            const wereldkampioen = document.getElementById('regCampioen').value.trim();
             if(!naam || !wereldkampioen) return alert('Vul alle velden in!');
 
             const res = await fetch('/api/deelnemers', {
@@ -158,7 +165,7 @@
             });
             if(res.ok) {
                 document.getElementById('regNaam').value = '';
-                document.getElementById('regKampioen').value = '';
+                document.getElementById('regCampioen').value = '';
                 loadData();
             } else {
                 alert('Fout bij registreren (naam bestaat mogelijk al).');
@@ -171,8 +178,9 @@
             const vUit = document.getElementById(`vUit-${matchId}`).value;
             
             if(!userId || vThuis === '' || vUit === '') return alert('Vul de volledige score in.');
+            if(!confirm("Weet je het zeker? Na het opslaan kun je deze voorspelling NIET meer aanpassen!")) return;
 
-            await fetch('/api/voorspellingen', {
+            const res = await fetch('/api/voorspellingen', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -182,8 +190,14 @@
                     voorspelling_uit: parseInt(vUit)
                 })
             });
-            alert('Voorspelling opgeslagen!');
-            loadData();
+
+            if(res.ok) {
+                alert('Voorspelling permanent opgeslagen!');
+                loadData();
+            } else {
+                const err = await res.json();
+                alert('Fout: ' + err.error);
+            }
         }
 
         async function opslaanUitslag() {
@@ -221,12 +235,11 @@
             }
         }
 
-        // Functie voor het kruisje met pop-up wachtwoord prompt
         async function verwijderSpelerPrompt(spelerId, spelerNaam) {
             if (!confirm(`Weet je zeker dat je ${spelerNaam} permanent wilt verwijderen?`)) return;
             
             const password = prompt(`Voer het admin wachtwoord in om ${spelerNaam} te verwijderen:`);
-            if (password === null) return; // Geannuleerd door gebruiker
+            if (password === null) return;
             if (!password) return alert('Wachtwoord mag niet leeg zijn!');
 
             const res = await fetch('/api/admin/verwijder-speler', {
