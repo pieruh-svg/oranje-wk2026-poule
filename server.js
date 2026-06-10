@@ -16,20 +16,20 @@ app.use(express.static(path.join(__dirname, 'public')));
 const ADMIN_PASSWORD = "admin@admin";
 const API_KEY = process.env.FOOTBALL_API_KEY;
 
-// PUNTEN LOGICA ENGINE (NIEUW SYSTEEM)
+// PUNTEN LOGICA ENGINE (DOELSALDO SYSTEEM)
 function berekenMatchPunten(vThuis, vUit, uThuis, uUit) {
     if (uThuis === null || uUit === null) return 0;
     
-    let punten = 0;
+    // Bereken het doelsaldo (bijv: 3 - 1 = 2)
+    const vSaldo = vThuis - vUit;
+    const uSaldo = uThuis - uUit;
 
-    // 1. Check uitslag qua doelpunten (2 punten per team dat exact goed is)
-    if (vThuis === uThuis) punten += 2;
-    if (vUit === uUit) punten += 2;
+    // 1. Per correct doelsaldo krijgt men 2 punten
+    if (vSaldo === uSaldo) {
+        return 2;
+    }
 
-    // Als de doelpunten al punten hebben opgeleverd, skippen we de trend-controle
-    if (punten > 0) return punten;
-
-    // 2. Winnend land goed? (1 punt)
+    // 2. Doelsaldo fout? Check of het winnende land / gelijkspel wel goed is (1 punt)
     const vWinnaar = vThuis > vUit ? 'THUIS' : (vThuis < vUit ? 'UIT' : 'GELIJK');
     const uWinnaar = uThuis > uUit ? 'THUIS' : (uThuis < uUit ? 'UIT' : 'GELIJK');
     
@@ -37,6 +37,7 @@ function berekenMatchPunten(vThuis, vUit, uThuis, uUit) {
         return 1;
     }
     
+    // 3. Anders 0 punten
     return 0;
 }
 
