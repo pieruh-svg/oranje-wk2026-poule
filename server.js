@@ -13,7 +13,7 @@ const pool = new Pool({
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-const ADMIN_PASSWORD = "admin1234";
+const ADMIN_PASSWORD = "admin@admin";
 const API_KEY = process.env.FOOTBALL_API_KEY;
 
 // PUNTEN LOGICA ENGINE
@@ -178,21 +178,18 @@ app.post('/api/admin/uitslag', async (req, res) => {
     }
 });
 
-// API: Admin BEVEILIGD uitslag wissen / resetten naar gepland
+// API: Admin uitslag wissen / resetten naar gepland
 app.post('/api/admin/wis-uitslag', async (req, res) => {
     const { password, wedstrijd_id } = req.body;
     if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: "Onjuist admin wachtwoord!" });
 
     try {
-        // Reset de uitslag naar NULL en zet de status terug op GEPLAND
         await pool.query(
             `UPDATE wedstrijden 
              SET uitslag_thuis = NULL, uitslag_uit = NULL, status = 'GEPLAND' 
              WHERE id = $1`, 
             [wedstrijd_id]
         );
-        
-        // Bereken de ranglijst opnieuw (zodat de punten van deze wedstrijd vervallen)
         await updateRanglijst();
         res.json({ success: true });
     } catch (err) {
