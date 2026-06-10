@@ -221,12 +221,12 @@
             }
         }
 
-        // Nieuwe functie voor het kruisje met pop-up wachtwoord prompt
+        // Functie voor het kruisje met pop-up wachtwoord prompt
         async function verwijderSpelerPrompt(spelerId, spelerNaam) {
             if (!confirm(`Weet je zeker dat je ${spelerNaam} permanent wilt verwijderen?`)) return;
             
             const password = prompt(`Voer het admin wachtwoord in om ${spelerNaam} te verwijderen:`);
-            if (password === null) return; // Geannuleerd
+            if (password === null) return; // Geannuleerd door gebruiker
             if (!password) return alert('Wachtwoord mag niet leeg zijn!');
 
             const res = await fetch('/api/admin/verwijder-speler', {
