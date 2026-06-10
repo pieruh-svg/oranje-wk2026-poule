@@ -126,7 +126,7 @@ app.post('/api/deelnemers', async (req, res) => {
     }
 });
 
-// API: Voorspelling opslaan (NU PERMANENT NA 1 KEER)
+// API: Voorspelling opslaan (OPGELOST: Vraagt nu niet meer naar "id"-kolom)
 app.post('/api/voorspellingen', async (req, res) => {
     const { deelnemer_id, wedstrijd_id, voorspelling_thuis, voorspelling_uit } = req.body;
     try {
@@ -136,9 +136,9 @@ app.post('/api/voorspellingen', async (req, res) => {
             return res.status(400).json({ error: "Deze wedstrijd is al afgelopen!" });
         }
 
-        // 2. EXTRA BEVEILIGING: Check of deze gebruiker al EERDER heeft opgeslagen voor deze match
+        // 2. CHECK OP BASIS VAN DEELNEMER & WEDSTRIJD (Voorkomt de "column id does not exist" crash)
         const bestaandeCheck = await pool.query(
-            'SELECT id FROM voorspellingen WHERE deelnemer_id = $1 AND wedstrijd_id = $2',
+            'SELECT deelnemer_id FROM voorspellingen WHERE deelnemer_id = $1 AND wedstrijd_id = $2',
             [deelnemer_id, wedstrijd_id]
         );
 
@@ -146,7 +146,7 @@ app.post('/api/voorspellingen', async (req, res) => {
             return res.status(400).json({ error: "Je hebt deze voorspelling al definitief opgeslagen!" });
         }
 
-        // 3. Als er nog niks stond, opslaan als pure INSERT (geen UPDATE meer mogelijk!)
+        // 3. Opslaan
         await pool.query(
             `INSERT INTO voorspellingen (deelnemer_id, wedstrijd_id, voorspelling_thuis, voorspelling_uit) 
              VALUES ($1, $2, $3, $4)`,
