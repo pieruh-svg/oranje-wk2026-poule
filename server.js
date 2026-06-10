@@ -50,6 +50,64 @@ async function updateRanglijst(optioneleWereldkampioen = null) {
     }
 }
 
+// LIVE API SYNC ENGINE
+async function fetchLiveUitslagen() {
+    try {
+        const response = await fetch('https://api.worldcup-results.com/v1/teams/netherlands');
+        if (!response.ok) return false;
+        const data = await response.json();
+
+        // KPN Groep F Mapping
+        const apiMatches = [
+            { id: 1, opponent: 'Japan' },
+            { id: 2, opponent: 'Zweden' },
+            { id: 3, opponent: 'Tunisia' }
+        ];
+
+        let databaseAangepast = false;
+
+        for (let map of apiMatches) {
+            const liveMatch = data.matches.find(m => m.home_team.includes(map.opponent) || m.away_team.includes(map.opponent));
+            
+            if (liveMatch && liveMatch.status === 'FINISHED') {
+                const thuisUitslag = liveMatch.home_team_score;
+                const uitUitslag = liveMatch.away_team_score;
+
+                const result = await pool.query(
+                    `UPDATE wedstrijden 
+                     SET uitslag_thuis = $1, uitslag_uit = $2, status = 'GESPEELD' 
+                     WHERE id = $3 AND status = 'GEPLAND'`, 
+                    [thuisUitslag, uitUitslag, map.id]
+                );
+                
+                if (result.rowCount > 0) {
+                    databaseAangepast = true;
+                }
+            }
+        }
+        
+        if (databaseAangepast) {
+            await updateRanglijst();
+        }
+        return true;
+    } catch (err) {
+        console.error("Fout bij ophalen live uitslagen:", err.message);
+        return false;
+    }
+}
+
+// API ROUTE VOOR UPTIMEROBOT
+app.get('/api/cron/sync', async (req, res) => {
+    const syncSuccesvol = await fetchLiveUitslagen();
+    
+    // We sturen ALTIJD een nette status 200 terug, zodat UptimeRobot groen blijft
+    if (syncSuccesvol) {
+        res.status(200).json({ success: true, message: "Sync succesvol uitgevoerd." });
+    } else {
+        res.status(200).json({ success: false, message: "Sync uitgevoerd, maar API-bron was onbereikbaar." });
+    }
+});
+
 // API: Haal status op
 app.get('/api/data', async (req, res) => {
     try {
@@ -69,7 +127,7 @@ app.post('/api/deelnemers', async (req, res) => {
         const nieuw = await pool.query('INSERT INTO deelnemers (naam, wereldkampioen) VALUES ($1, $2) RETURNING *', [naam, wereldkampioen]);
         res.json(nieuw.rows[0]);
     } catch (err) {
-        res.status(400).json({ error: "Naam bestaat al of ongeldige invoer." });
+        res.status(400).json({ error: "Naam bestaat al." });
     }
 });
 
@@ -90,10 +148,10 @@ app.post('/api/voorspellingen', async (req, res) => {
     }
 });
 
-// API: Admin uitslag invoeren/wijzigen (beveiligd)
+// API: Admin uitslag handmatig (Backup)
 app.post('/api/admin/uitslag', async (req, res) => {
     const { password, wedstrijd_id, uitslag_thuis, uitslag_uit, status, eindgoud } = req.body;
-    if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: "Onjuist wachtwoord!" });
+    if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: "Onjuist!" });
 
     try {
         if (status === 'GEPLAND') {
@@ -108,10 +166,10 @@ app.post('/api/admin/uitslag', async (req, res) => {
     }
 });
 
-// API: Admin speler verwijderen (beveiligd)
+// API: Admin speler verwijderen
 app.post('/api/admin/verwijder-speler', async (req, res) => {
     const { password, herstel_id } = req.body;
-    if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: "Onjuist wachtwoord!" });
+    if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: "Onjuist!" });
 
     try {
         await pool.query('DELETE FROM deelnemers WHERE id = $1', [herstel_id]);
