@@ -16,15 +16,27 @@ app.use(express.static(path.join(__dirname, 'public')));
 const ADMIN_PASSWORD = "admin@admin";
 const API_KEY = process.env.FOOTBALL_API_KEY;
 
-// PUNTEN LOGICA ENGINE
+// PUNTEN LOGICA ENGINE (NIEUW SYSTEEM)
 function berekenMatchPunten(vThuis, vUit, uThuis, uUit) {
     if (uThuis === null || uUit === null) return 0;
-    if (vThuis === uThuis && vUit === uUit) return 3; // Exact goed
     
+    let punten = 0;
+
+    // 1. Check uitslag qua doelpunten (2 punten per team dat exact goed is)
+    if (vThuis === uThuis) punten += 2;
+    if (vUit === uUit) punten += 2;
+
+    // Als de doelpunten al punten hebben opgeleverd, skippen we de trend-controle
+    if (punten > 0) return punten;
+
+    // 2. Winnend land goed? (1 punt)
     const vWinnaar = vThuis > vUit ? 'THUIS' : (vThuis < vUit ? 'UIT' : 'GELIJK');
     const uWinnaar = uThuis > uUit ? 'THUIS' : (uThuis < uUit ? 'UIT' : 'GELIJK');
     
-    if (vWinnaar === uWinnaar) return 2; // Trend goed
+    if (vWinnaar === uWinnaar) {
+        return 1;
+    }
+    
     return 0;
 }
 
