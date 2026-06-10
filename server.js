@@ -5,7 +5,6 @@ const path = require('path');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Connectie met Render PostgreSQL (vereist SSL configuratie)
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false }
@@ -13,6 +12,8 @@ const pool = new Pool({
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+const ADMIN_PASSWORD = "admin1234";
 
 // PUNTEN LOGICA ENGINE
 function berekenMatchPunten(vThuis, vUit, uThuis, uUit) {
@@ -22,7 +23,7 @@ function berekenMatchPunten(vThuis, vUit, uThuis, uUit) {
     const vWinnaar = vThuis > vUit ? 'THUIS' : (vThuis < vUit ? 'UIT' : 'GELIJK');
     const uWinnaar = uThuis > uUit ? 'THUIS' : (uThuis < uUit ? 'UIT' : 'GELIJK');
     
-    if (vWinnaar === uWinnaar) return 2; // Trend/Winnaar goed
+    if (vWinnaar === uWinnaar) return 2; // Trend goed
     return 0;
 }
 
@@ -49,7 +50,7 @@ async function updateRanglijst(optioneleWereldkampioen = null) {
     }
 }
 
-// API: Haal status op (Deelnemers, Matchen, Voorspellingen)
+// API: Haal status op
 app.get('/api/data', async (req, res) => {
     try {
         const deelnemers = await pool.query('SELECT * FROM deelnemers ORDER BY punten DESC, naam ASC');
@@ -72,7 +73,7 @@ app.post('/api/deelnemers', async (req, res) => {
     }
 });
 
-// API: Voorspelling opslaan/updaten
+// API: Voorspelling opslaan
 app.post('/api/voorspellingen', async (req, res) => {
     const { deelnemer_id, wedstrijd_id, voorspelling_thuis, voorspelling_uit } = req.body;
     try {
@@ -89,12 +90,32 @@ app.post('/api/voorspellingen', async (req, res) => {
     }
 });
 
-// API: Admin uitslag invoeren & herberekenen
+// API: Admin uitslag invoeren/wijzigen (beveiligd)
 app.post('/api/admin/uitslag', async (req, res) => {
-    const { wedstrijd_id, uitslag_thuis, uitslag_uit, eindgoud } = req.body;
+    const { password, wedstrijd_id, uitslag_thuis, uitslag_uit, status, eindgoud } = req.body;
+    if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: "Onjuist wachtwoord!" });
+
     try {
-        await pool.query('UPDATE wedstrijden SET uitslag_thuis = $1, uitslag_uit = $2, status = \'GESPEELD\' WHERE id = $3', [uitslag_thuis, uitslag_uit, wedstrijd_id]);
+        if (status === 'GEPLAND') {
+            await pool.query('UPDATE wedstrijden SET uitslag_thuis = NULL, uitslag_uit = NULL, status = \'GEPLAND\' WHERE id = $1', [wedstrijd_id]);
+        } else {
+            await pool.query('UPDATE wedstrijden SET uitslag_thuis = $1, uitslag_uit = $2, status = \'GESPEELD\' WHERE id = $3', [uitslag_thuis, uitslag_uit, wedstrijd_id]);
+        }
         await updateRanglijst(eindgoud);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// API: Admin speler verwijderen (beveiligd)
+app.post('/api/admin/verwijder-speler', async (req, res) => {
+    const { password, herstel_id } = req.body;
+    if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: "Onjuist wachtwoord!" });
+
+    try {
+        await pool.query('DELETE FROM deelnemers WHERE id = $1', [herstel_id]);
+        await updateRanglijst();
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
